@@ -1,0 +1,114 @@
+// SHUBHAM KUMAR
+// 2022ebcs221@online.bits-pilani.ac.in
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  VOLUNTEER
+  ORGANIZATION
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+  COMPLETED
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      UserRole
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  volunteerProfile    VolunteerProfile?
+  organizationProfile OrganizationProfile?
+}
+
+model VolunteerProfile {
+  id           String                @id @default(uuid())
+  userId       String                @unique
+  user         User                  @relation(fields: [userId], references: [id])
+  phone        String?
+  location     String?
+  skills       String[]
+  interests    String[]
+  bio          String?               @db.Text
+  availability String?               @db.Text
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  applications VolunteerApplication[]
+}
+
+model OrganizationProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id])
+  organizationName   String
+  registrationNumber String?
+  description        String?  @db.Text
+  address            String?
+  website            String?
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  events             Event[]
+}
+
+model Event {
+  id              String                @id @default(uuid())
+  organizationId  String
+  organization    OrganizationProfile   @relation(fields: [organizationId], references: [id])
+  title           String
+  description     String                @db.Text
+  category        String
+  location        String
+  startDate       DateTime
+  endDate         DateTime
+  requiredSkills  String[]
+  volunteerLimit  Int
+  status          EventStatus           @default(DRAFT)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  applications    VolunteerApplication[]
+}
+
+model VolunteerApplication {
+  id           String            @id @default(uuid())
+  eventId      String
+  event        Event             @relation(fields: [eventId], references: [id])
+  volunteerId  String
+  volunteer    VolunteerProfile  @relation(fields: [volunteerId], references: [id])
+  message      String?           @db.Text
+  status       ApplicationStatus @default(PENDING)
+  appliedAt    DateTime          @default(now())
+
+  @@unique([eventId, volunteerId])
+}
