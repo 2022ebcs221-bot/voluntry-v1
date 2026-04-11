@@ -13,3 +13,14 @@ export const volunteerProfileSchema = z.object({
 });
 
 export type VolunteerProfileFormData = z.infer<typeof volunteerProfileSchema>;
+
+export const organizationProfileSchema = z.object({
+  organizationName: z.string().min(1, 'Organization name is required'),
+  contactPerson: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  address: z.string().optional(),
+  description: z.string().optional(),
+  website: z.string().url().optional().or(z.literal('')),
+});
+
+export type OrganizationProfileFormData = z.infer<typeof organizationProfileSchema>;
