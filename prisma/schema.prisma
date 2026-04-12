@@ -62,6 +62,7 @@ model VolunteerProfile {
   interests    String[]
   bio          String?               @db.Text
   availability String?               @db.Text
+  status       String                @default("PENDING")
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
   applications VolunteerApplication[]
