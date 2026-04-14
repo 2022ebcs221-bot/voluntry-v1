@@ -30,11 +30,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.role);
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       message: 'Login successful', 
-      token, 
       user: { 
         id: user.id, 
         name: user.name, 
@@ -42,6 +41,16 @@ export async function POST(req: Request) {
         role: user.role 
       } 
     });
+
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

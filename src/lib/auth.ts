@@ -12,9 +12,9 @@ export async function comparePassword(password: string, hashedPassword: string):
   return bcrypt.compare(password, hashedPassword);
 }
 
-export function generateToken(userId: string): string {
+export function generateToken(userId: string, role: string): string {
   const secret = process.env.JWT_SECRET || 'default-secret-key';
-  return jwt.sign({ userId }, secret, { expiresIn: '7d' });
+  return jwt.sign({ userId, role }, secret, { expiresIn: '7d' });
 }
 
 export function verifyToken(token: string): string | object {
