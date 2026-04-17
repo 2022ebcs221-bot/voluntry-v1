@@ -8,9 +8,9 @@ export function getDashboardPath(role: string): string {
     case 'ADMIN':
       return '/dashboard/admin';
     case 'VOLUNTEER':
-      return '/profile/volunteer';
+      return '/dashboard/volunteer';
     case 'ORGANIZATION':
-      return '/profile/organization';
+      return '/dashboard/organization';
     default:
       return '/';
   }
