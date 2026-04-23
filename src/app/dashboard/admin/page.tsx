@@ -25,6 +25,8 @@ export default function AdminDashboardPage() {
   const [pendingOrgs, setPendingOrgs] = useState<Profile[]>([]);
   const [pendingVols, setPendingVols] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'error' } | { text: string; type: 'success' } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -55,12 +57,52 @@ export default function AdminDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleStatusChange = async (userId: string, status: 'APPROVED' | 'REJECTED', profileType: 'org' | 'vol') => {
+    setProcessingUserId(userId);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage({ text: data.error || 'Action failed', type: 'error' });
+      } else {
+        if (profileType === 'org') {
+          setPendingOrgs((prev) => prev.filter((o) => o.userId !== userId));
+          setStats((prev) => prev ? { ...prev, pendingOrgApprovals: prev.pendingOrgApprovals - 1 } : prev);
+        } else {
+          setPendingVols((prev) => prev.filter((v) => v.userId !== userId));
+          setStats((prev) => prev ? { ...prev, pendingVolunteerVerifications: prev.pendingVolunteerVerifications - 1 } : prev);
+        }
+        setMessage({ text: data.message, type: 'success' });
+        setTimeout(() => setMessage(null), 4000);
+      }
+    } catch {
+      setMessage({ text: 'Network error. Please try again.', type: 'error' });
+    } finally {
+      setProcessingUserId(null);
+    }
+  };
+
   if (loading) return <div className="p-8">Loading...</div>;
+
+  const msgBanner = message ? (
+    <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${
+      message.type === 'success' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300'
+    }`}>
+      {message.type === 'success' ? '✅ ' : '❌ '}{message.text}
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+
+        {msgBanner}
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -98,6 +140,7 @@ export default function AdminDashboardPage() {
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Org Name</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -107,6 +150,24 @@ export default function AdminDashboardPage() {
                         <td className="px-4 py-2 text-sm text-gray-500">{org.user.email}</td>
                         <td className="px-4 py-2 text-sm text-gray-500">
                           {new Date(org.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleStatusChange(org.userId, 'APPROVED', 'org')}
+                              disabled={processingUserId === org.userId}
+                              className="bg-green-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {processingUserId === org.userId ? '...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(org.userId, 'REJECTED', 'org')}
+                              disabled={processingUserId === org.userId}
+                              className="bg-red-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {processingUserId === org.userId ? '...' : 'Reject'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -129,6 +190,7 @@ export default function AdminDashboardPage() {
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -138,6 +200,24 @@ export default function AdminDashboardPage() {
                         <td className="px-4 py-2 text-sm text-gray-500">{vol.user.email}</td>
                         <td className="px-4 py-2 text-sm text-gray-500">
                           {new Date(vol.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleStatusChange(vol.userId, 'APPROVED', 'vol')}
+                              disabled={processingUserId === vol.userId}
+                              className="bg-green-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {processingUserId === vol.userId ? '...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(vol.userId, 'REJECTED', 'vol')}
+                              disabled={processingUserId === vol.userId}
+                              className="bg-red-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {processingUserId === vol.userId ? '...' : 'Reject'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

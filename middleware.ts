@@ -1,6 +1,9 @@
+// SHUBHAM KUMAR
+// 2022ebcs221@online.bits-pilani.ac.in
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getAuthToken, decodeToken, getDashboardPath } from './src/lib/permissions';
+import { getAuthToken, decodeToken, getDashboardPath, isUserApproved } from './src/lib/permissions';
 
 export async function middleware(request: NextRequest) {
   const token = await getAuthToken();
@@ -50,6 +53,14 @@ if (isPublicRoute && path.startsWith('/dashboard')) {
 
   if (path.startsWith('/dashboard/organization') && userRole !== 'ORGANIZATION') {
     return NextResponse.redirect(new URL(getDashboardPath(userRole), request.url));
+  }
+
+  // Check user approval status for protected routes
+  if (path.startsWith('/dashboard') || path.startsWith('/profile')) {
+    const approved = await isUserApproved(decoded.userId);
+    if (!approved) {
+      return NextResponse.redirect(new URL('/status', request.url));
+    }
   }
 
   return NextResponse.next();

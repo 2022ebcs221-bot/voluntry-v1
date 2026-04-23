@@ -11,6 +11,7 @@ export default function OrganizationProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [userStatus, setUserStatus] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<OrganizationProfileFormData>({
     organizationName: '',
@@ -45,6 +46,9 @@ export default function OrganizationProfilePage() {
             description: data.profile.description || '',
             website: data.profile.website || '',
           });
+        }
+        if (data.status) {
+          setUserStatus(data.status);
         }
       })
       .catch((err) => console.error(err))
@@ -101,6 +105,18 @@ export default function OrganizationProfilePage() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow">
+        {userStatus && userStatus !== 'APPROVED' && (
+          <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${
+            userStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+            'bg-red-100 text-red-800 border border-red-300'
+          }`}>
+            {userStatus === 'PENDING' ? (
+              <>⏳ Your account is <strong>pending approval</strong>. Some features may be limited.</>
+            ) : (
+              <>❌ Your account has been <strong>rejected</strong>. Please contact support.</>
+            )}
+          </div>
+        )}
         <h1 className="text-2xl font-bold mb-6">Organization Profile</h1>
         
         <form onSubmit={handleSubmit}>

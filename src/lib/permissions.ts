@@ -1,5 +1,9 @@
+// SHUBHAM KUMAR
+// 2022ebcs221@online.bits-pilani.ac.in
+
 import { cookies } from 'next/headers';
 import { verifyToken } from './auth';
+import { prisma } from '@/lib/prisma';
 
 export type UserRole = 'ADMIN' | 'VOLUNTEER' | 'ORGANIZATION';
 
@@ -31,5 +35,17 @@ export function decodeToken(token: string) {
     return verifyToken(token);
   } catch (error) {
     return null;
+  }
+}
+
+export async function isUserApproved(userId: string): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    return user?.status === 'APPROVED';
+  } catch {
+    return false;
   }
 }

@@ -18,13 +18,14 @@ export async function GET(req: Request) {
 
     const profile = await prisma.organizationProfile.findUnique({
       where: { userId: decoded.userId },
+      include: { user: { select: { status: true } } },
     });
 
     if (!profile) {
-      return NextResponse.json({ message: 'Profile not found', profile: null }, { status: 404 });
+      return NextResponse.json({ message: 'Profile not found', profile: null, status: null }, { status: 404 });
     }
 
-    return NextResponse.json({ profile });
+    return NextResponse.json({ profile, status: profile.user.status });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
