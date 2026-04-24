@@ -1,3 +1,6 @@
+// SHUBHAM KUMAR
+// 2022ebcs221@online.bits-pilani.ac.in
+
 import "dotenv/config";
 import { defineConfig, env } from "prisma/config";
 
