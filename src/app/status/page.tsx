@@ -33,14 +33,12 @@ export default async function StatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8 text-black">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
         {user.status === 'PENDING' ? (
           <>
             <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="h-10 w-10 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <span className="material-symbols-outlined h-10 w-10 text-yellow-600">schedule</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-3">Account Under Review</h1>
             <p className="text-gray-600 mb-6">
@@ -54,9 +52,7 @@ export default async function StatusPage() {
         ) : user.status === 'REJECTED' ? (
           <>
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m0 0l2 2m0 0l-2 2m0 0l-2-2m0 0l-2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <span className="material-symbols-outlined h-10 w-10 text-red-600">cancel</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-3">Account Rejected</h1>
             <p className="text-gray-600 mb-6">
@@ -72,9 +68,7 @@ export default async function StatusPage() {
         ) : user.status === 'SUSPENDED' ? (
           <>
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              </svg>
+              <span className="material-symbols-outlined h-10 w-10 text-gray-600">block</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-3">Account Suspended</h1>
             <p className="text-gray-600 mb-6">
