@@ -3,23 +3,17 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getAuthToken, decodeToken } from '@/lib/permissions';
 
 export async function GET(req: Request) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = await getAuthToken();
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token) as { userId: string };
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
-
-    if (!user || user.role !== 'ADMIN') {
+    const decoded = decodeToken(token) as { userId: string; role: string } | null;
+    if (!decoded || decoded.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
     }
 
@@ -34,9 +28,59 @@ export async function GET(req: Request) {
       }),
     ]);
 
+    // Also include users who registered but have not yet created their profile
+    const usersWithoutOrgProfile = await prisma.user.findMany({
+      where: {
+        role: 'ORGANIZATION',
+        organizationProfile: null,
+        status: 'PENDING',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    const usersWithoutVolProfile = await prisma.user.findMany({
+      where: {
+        role: 'VOLUNTEER',
+        volunteerProfile: null,
+        status: 'PENDING',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    const mergedPendingOrgs = [
+      ...pendingOrganizations,
+      ...usersWithoutOrgProfile.map((u) => ({
+        id: u.id,
+        userId: u.id,
+        user: { name: u.name, email: u.email },
+        createdAt: u.createdAt.toISOString(),
+        organizationName: u.name,
+      })),
+    ];
+
+    const mergedPendingVols = [
+      ...pendingVolunteers,
+      ...usersWithoutVolProfile.map((u) => ({
+        id: u.id,
+        userId: u.id,
+        user: { name: u.name, email: u.email },
+        createdAt: u.createdAt.toISOString(),
+      })),
+    ];
+
     return NextResponse.json({
-      pendingOrganizations,
-      pendingVolunteers,
+      pendingOrganizations: mergedPendingOrgs,
+      pendingVolunteers: mergedPendingVols,
     });
   } catch (error) {
     console.error(error);
