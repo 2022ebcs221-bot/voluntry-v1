@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { comparePassword, generateToken } from '@/lib/auth';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -53,6 +53,9 @@ export async function POST(req: Request) {
     return response;
   } catch (error) {
     console.error(error);
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

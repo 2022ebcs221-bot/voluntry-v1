@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
+import Navbar from '@/components/Navbar';
 
 const volunteerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -78,7 +79,9 @@ export default function VolunteerRegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen bg-gray-100 text-black">
+      <Navbar />
+      <div className="flex items-center justify-center pt-16 pb-8">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6 text-center">Volunteer Registration</h1>
         <form onSubmit={handleSubmit}>
@@ -129,14 +132,15 @@ export default function VolunteerRegisterPage() {
           {serverError && <p className="text-red-500 text-sm mb-4">{serverError}</p>}
           <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="w-full bg-brand-primary hover:bg-brand-primary-hover text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             Register
           </button>
         </form>
         <p className="mt-4 text-center text-sm">
-          Already have an account? <a href="/login" className="text-blue-500 hover:text-blue-700">Login</a>
+          Already have an account? <a href="/login" className="text-brand-primary hover:text-brand-primary-hover">Login</a>
         </p>
+      </div>
       </div>
     </div>
   );
