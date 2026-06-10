@@ -1,9 +1,6 @@
-// SHUBHAM KUMAR
-// 2022ebcs221@online.bits-pilani.ac.in
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 const DASHBOARD_ROUTES: Record<string, string> = {
@@ -32,8 +29,13 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('');
-  const [skills, setSkills] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
+  const skillsDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -51,10 +53,31 @@ export default function EventsPage() {
       .finally(() => setCheckingAuth(false));
   }, []);
 
-  const fetchEvents = (searchCategory?: string, searchSkills?: string) => {
+  useEffect(() => {
+    fetch('/api/events/filters')
+      .then((res) => res.json())
+      .then((data) => {
+        setAvailableCategories(data.categories || []);
+        setAvailableSkills(data.skills || []);
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (skillsDropdownRef.current && !skillsDropdownRef.current.contains(e.target as Node)) {
+        setShowSkillsDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchEvents = (searchKeyword?: string, searchCategory?: string, searchSkills?: string[]) => {
     const params = new URLSearchParams();
+    if (searchKeyword) params.set('q', searchKeyword);
     if (searchCategory) params.set('category', searchCategory);
-    if (searchSkills) params.set('skills', searchSkills);
+    if (searchSkills && searchSkills.length > 0) params.set('skills', searchSkills.join(','));
 
     fetch(`/api/events?${params.toString()}`)
       .then((res) => res.json())
@@ -72,7 +95,13 @@ export default function EventsPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    fetchEvents(category, skills);
+    fetchEvents(keyword, category, selectedSkills);
+  };
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
   };
 
   if (checkingAuth) return null;
@@ -96,18 +125,63 @@ export default function EventsPage() {
         <form onSubmit={handleSearch} className="bg-white p-4 rounded-lg shadow mb-8 flex flex-col md:flex-row gap-4">
           <input
             type="text"
-            placeholder="Category (e.g. Education)"
+            placeholder="Search events..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500"
+          />
+
+          {/* Category Dropdown */}
+          <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="text"
-            placeholder="Skills (comma separated)"
-            value={skills}
-            onChange={(e) => setSkills(e.target.value)}
-            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500"
-          />
+            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="">All Categories</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          {/* Skills Multi-Select Dropdown */}
+          <div className="flex-1 relative" ref={skillsDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowSkillsDropdown(!showSkillsDropdown)}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+            >
+              <span className={selectedSkills.length === 0 ? 'text-gray-500' : ''}>
+                {selectedSkills.length === 0
+                  ? 'All Skills'
+                  : `${selectedSkills.length} skill${selectedSkills.length > 1 ? 's' : ''} selected`}
+              </span>
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showSkillsDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
+                {availableSkills.map((skill) => (
+                  <label
+                    key={skill}
+                    className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSkills.includes(skill)}
+                      onChange={() => toggleSkill(skill)}
+                      className="mr-2 rounded"
+                    />
+                    {skill}
+                  </label>
+                ))}
+                {availableSkills.length === 0 && (
+                  <p className="px-3 py-2 text-gray-500 text-sm">No skills available</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             className="bg-brand-primary text-white px-6 py-2 rounded hover:bg-brand-primary-hover font-medium"

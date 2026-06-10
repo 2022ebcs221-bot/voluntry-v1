@@ -187,8 +187,8 @@ export default function CreateEventPage() {
               {...register('status')}
               className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="DRAFT">Draft</option>
               <option value="PUBLISHED">Published</option>
+              <option value="DRAFT">Draft</option>
             </select>
           </div>
 
@@ -212,6 +212,29 @@ export default function CreateEventPage() {
 
           <div>
             <label className="block text-gray-700 font-bold mb-2">Event Image</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.url) {
+                  setValue('image', data.url);
+                  setPreviewImage(data.url);
+                }
+              }}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {previewImage && (
+              <img src={previewImage} alt="Preview" className="mt-2 h-32 w-auto rounded" />
+            )}
+          </div>
+
+          <div className="flex gap-4">
             <button
               type="submit"
               disabled={submitStatus === 'loading'}

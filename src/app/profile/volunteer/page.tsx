@@ -4,6 +4,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { volunteerProfileSchema, VolunteerProfileFormData } from '@/lib/validations';
 import { z } from 'zod';
 
@@ -14,8 +15,10 @@ export default function VolunteerProfilePage() {
   const [userStatus, setUserStatus] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<VolunteerProfileFormData>({
+    name: '',
     phone: '',
     location: '',
+    image: '',
     skills: [],
     interests: [],
     availability: '',
@@ -26,29 +29,22 @@ export default function VolunteerProfilePage() {
   const [interestInput, setInterestInput] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login first');
-      window.location.href = '/login';
-      return;
-    }
-
-    fetch('/api/profile/volunteer', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    })
+    fetch('/api/profile/volunteer')
       .then((res) => res.json())
       .then((data) => {
         if (data.profile) {
           setFormData({
+            name: data.userName || '',
             phone: data.profile.phone || '',
             location: data.profile.location || '',
+            image: data.profile.image || '',
             skills: data.profile.skills || [],
             interests: data.profile.interests || [],
             availability: data.profile.availability || '',
             bio: data.profile.bio || '',
           });
+        } else if (data.userName) {
+          setFormData((prev) => ({ ...prev, name: data.userName }));
         }
         if (data.status) {
           setUserStatus(data.status);
@@ -102,20 +98,16 @@ export default function VolunteerProfilePage() {
       volunteerProfileSchema.parse(formData);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        setMessage('Validation failed: ' + error.errors[0].message);
+        setMessage('Validation failed: ' + error.issues[0].message);
         setSaving(false);
         return;
       }
     }
 
-    const token = localStorage.getItem('token');
     try {
       const res = await fetch('/api/profile/volunteer', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
@@ -136,8 +128,10 @@ export default function VolunteerProfilePage() {
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow">
+    <div className="min-h-screen bg-gray-100 p-8 text-black">
+      <div className="max-w-2xl mx-auto">
+        <Link href="/dashboard/volunteer" className="text-brand-primary hover:text-brand-primary mb-4 inline-block text-sm">&larr; Back to Dashboard</Link>
+        <div className="bg-white p-8 rounded-lg shadow">
         {userStatus && userStatus !== 'APPROVED' && (
           <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${
             userStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
@@ -153,6 +147,46 @@ export default function VolunteerProfilePage() {
         <h1 className="text-2xl font-bold mb-6">Volunteer Profile</h1>
         
         <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-gray-700 font-bold mb-2">Full Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 font-bold mb-2">Profile Image</label>
+            <div className="flex items-center gap-4">
+              {formData.image ? (
+                <img src={formData.image} alt="Profile" className="w-16 h-16 rounded-full object-cover border" />
+              ) : (
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 border text-xs text-center">No Image</div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append('file', file);
+                  try {
+                    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setFormData((prev) => ({ ...prev, image: data.url }));
+                    }
+                  } catch {}
+                }}
+                className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-brand-primary-hover hover:file:bg-blue-100"
+              />
+            </div>
+          </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 font-bold mb-2">Phone</label>
             <input
@@ -195,12 +229,12 @@ export default function VolunteerProfilePage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.skills?.map((skill, index) => (
-                <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center">
+                <span key={index} className="bg-blue-100 text-brand-primary px-3 py-1 rounded-full flex items-center">
                   {skill}
                   <button
                     type="button"
                     onClick={() => removeSkill(index)}
-                    className="ml-2 text-blue-600 hover:text-blue-800"
+                    className="ml-2 text-brand-primary hover:text-brand-primary"
                   >
                     &times;
                   </button>
@@ -229,12 +263,12 @@ export default function VolunteerProfilePage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.interests?.map((interest, index) => (
-                <span key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full flex items-center">
+                <span key={index} className="bg-brand-accent-light text-green-800 px-3 py-1 rounded-full flex items-center">
                   {interest}
                   <button
                     type="button"
                     onClick={() => removeInterest(index)}
-                    className="ml-2 text-green-600 hover:text-green-800"
+                    className="ml-2 text-brand-accent hover:text-green-800"
                   >
                     &times;
                   </button>
@@ -268,7 +302,7 @@ export default function VolunteerProfilePage() {
           </div>
 
           {message && (
-            <div className={`mb-4 p-3 rounded ${message.includes('success') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <div className={`mb-4 p-3 rounded ${message.includes('success') ? 'bg-brand-accent-light text-green-800' : 'bg-red-100 text-red-800'}`}>
               {message}
             </div>
           )}
@@ -276,11 +310,12 @@ export default function VolunteerProfilePage() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400"
+            className="w-full bg-brand-primary text-white py-2 px-4 rounded hover:bg-brand-primary-hover disabled:bg-gray-400"
           >
             {saving ? 'Saving...' : 'Save Profile'}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );

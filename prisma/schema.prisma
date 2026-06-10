@@ -39,17 +39,22 @@ enum ApplicationStatus {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  name      String
-  email     String     @unique
-  password  String
-  role      UserRole
-  status    UserStatus @default(PENDING)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String     @id @default(uuid())
+  name       String
+  email      String     @unique
+  password   String?
+  provider   String?              @default("email")
+  providerId String?
+  image      String?
+  role       UserRole
+  status     UserStatus @default(PENDING)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   volunteerProfile    VolunteerProfile?
   organizationProfile OrganizationProfile?
+
+  @@unique([provider, providerId])
 }
 
 model VolunteerProfile {
@@ -104,6 +109,8 @@ model Event {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   applications    VolunteerApplication[]
+
+  @@index([category])
 }
 
 model VolunteerApplication {

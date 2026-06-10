@@ -17,6 +17,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const userStatus = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { status: true },
+    });
+
+    if (!userStatus || userStatus.status !== 'APPROVED') {
+      const message = userStatus?.status === 'REJECTED' 
+        ? 'Your account has been rejected' 
+        : 'Your account has not been approved yet';
+      return NextResponse.json({ 
+        error: message, 
+        status: userStatus?.status 
+      }, { status: 403 });
+    }
+
     const userId = decoded.userId;
 
     // Get Profile

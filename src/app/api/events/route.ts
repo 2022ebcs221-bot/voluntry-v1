@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const q = searchParams.get('q');
     const category = searchParams.get('category');
     const skillsParam = searchParams.get('skills');
 
@@ -17,6 +18,15 @@ export async function GET(req: Request) {
       status: 'PUBLISHED',
       startDate: { gte: new Date() },
     };
+
+    if (q) {
+      where.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+        { location: { contains: q, mode: 'insensitive' } },
+        { category: { contains: q, mode: 'insensitive' } },
+      ];
+    }
 
     if (category) {
       where.category = { equals: category, mode: 'insensitive' };
@@ -100,6 +110,8 @@ export async function POST(req: Request) {
         endDate: new Date(validatedData.endDate),
         requiredSkills: validatedData.requiredSkills,
         volunteerLimit: validatedData.volunteerLimit,
+        image: validatedData.image,
+        questions: validatedData.questions || [],
         status: validatedData.status,
         organizationId: orgProfile.id,
       },

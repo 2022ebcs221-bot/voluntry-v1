@@ -19,18 +19,35 @@ export async function GET(req: Request) {
 
     const userId = decoded.userId;
 
+    // Check User-level approval status first
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+
+    if (!user || user.status !== 'APPROVED') {
+      const message = user?.status === 'REJECTED' 
+        ? 'Your account has been rejected' 
+        : 'Your account has not been approved yet';
+      return NextResponse.json({ 
+        error: message, 
+        status: user?.status 
+      }, { status: 403 });
+    }
+
     // Get Profile
     const profile = await prisma.organizationProfile.findUnique({
       where: { userId },
       include: { user: true }
     });
 
-    // Check Approval Status
-    if (profile?.status !== 'APPROVED') {
-      return NextResponse.json({ 
-        error: 'Organization not approved', 
-        status: profile?.status 
-      }, { status: 403 });
+    if (!profile) {
+      return NextResponse.json({
+        profile: null,
+        events: [],
+        eventStats: {},
+        pendingApplications: []
+      });
     }
 
     // Get Created Events

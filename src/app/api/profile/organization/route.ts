@@ -3,29 +3,31 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { getAuthToken, decodeToken } from '@/lib/permissions';
 import { organizationProfileSchema } from '@/lib/validations';
 
 export async function GET(req: Request) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = await getAuthToken();
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token) as { userId: string };
+    const decoded = decodeToken(token) as { userId: string };
+    if (!decoded) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const profile = await prisma.organizationProfile.findUnique({
       where: { userId: decoded.userId },
-      include: { user: { select: { status: true } } },
+      include: { user: { select: { name: true, status: true } } },
     });
 
     if (!profile) {
-      return NextResponse.json({ message: 'Profile not found', profile: null, status: null }, { status: 404 });
+      return NextResponse.json({ message: 'Profile not found', profile: null, status: null, userName: null }, { status: 404 });
     }
 
-    return NextResponse.json({ profile, status: profile.user.status });
+    return NextResponse.json({ profile, status: profile.user.status, userName: profile.user.name });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -34,18 +36,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = await getAuthToken();
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token) as { userId: string };
+    const decoded = decodeToken(token) as { userId: string };
+    if (!decoded) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await req.json();
+    const { userName: newName, ...profileFields } = body;
     
-    // Parse and validate the request body
-    const validatedData = organizationProfileSchema.parse(body);
+    // Parse and validate the request body (exclude userName from profile validation)
+    const validatedData = organizationProfileSchema.parse(profileFields);
 
     // Ensure the user has a role of ORGANIZATION
     const user = await prisma.user.findUnique({
@@ -54,6 +59,14 @@ export async function POST(req: Request) {
 
     if (!user || user.role !== 'ORGANIZATION') {
       return NextResponse.json({ error: 'User is not an organization' }, { status: 403 });
+    }
+
+    // Update user name if provided
+    if (newName && newName.trim() !== '') {
+      await prisma.user.update({
+        where: { id: decoded.userId },
+        data: { name: newName.trim() },
+      });
     }
 
     // Upsert the profile - default status PENDING
@@ -70,8 +83,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Profile updated successfully', profile }, { status: 200 });
   } catch (error: unknown) {
     console.error(error);
-    if (error.name === 'ZodError') {
-      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
+    const err = error as { name?: string; errors?: unknown[] };
+    if (err.name === 'ZodError') {
+      return NextResponse.json({ error: 'Validation failed', details: err.errors }, { status: 400 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
